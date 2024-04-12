@@ -3,6 +3,8 @@
 A repository created to make my college projects evolving computer architecture.
 Most projects found here will be Assembly code
 
+You can download [here](https://github.com/nicolascoutochaves/computer-architecture/edit/master/Emulators.zip) the Assembler and the emulators for the Ramses and Cesar.
+
 ## Current Processors:
 
 - Ramses
@@ -52,6 +54,4 @@ Most projects found here will be Assembly code
     INDEX: index register: SI and DI;
 - Little Endian;
 
-
-You can download [here](#) the Assembler and the emulators for the Ramses and Cesar.
 
