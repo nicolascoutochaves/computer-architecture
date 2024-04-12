@@ -3,7 +3,7 @@
 A repository created to make my college projects evolving computer architecture.
 Most projects found here will be Assembly code
 
-You can download <a href="https://downgit.github.io/#/home?url=https://github.com/nicolascoutochaves/computer-architecture/blob/master/Emulators.zip!" target="_blank" >here</a> the Assembler and the emulators for the Ramses and Cesar.
+You can download [here](https://downgit.github.io/#/home?url=https://github.com/nicolascoutochaves/computer-architecture/blob/master/Emulators.zip) the Assembler and the emulators for the Ramses and Cesar.
 
 ## Current Processors:
 
