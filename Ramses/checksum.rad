@@ -1,0 +1,17 @@
+ORG 208
+N:	DB 0	;Number of operations
+XSUM:	DB 0	;Checksum result
+VCHAR:	DB 212	;Address of the first byte of VCHAR (21 bytes)
+VBITS:	DB 234	;Address of the first byte of VBITS (21 bytes)
+
+ORG 0
+	
+	LDR A, #0	;Initialize registers and variables
+	LDR X, #0
+	STR A, XSUM
+	STR A, N
+	STR A, 233	;puts the terminator #0 in the last char
+	LDR A, #212
+	STR A, VCHAR
+	LDR A, #234
+	STR A, VBITS

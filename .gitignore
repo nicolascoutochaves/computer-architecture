@@ -1,0 +1,4 @@
+#ignore .mem files
+*.mem
+#ignore .map files
+*.map
