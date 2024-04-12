@@ -5,6 +5,8 @@ Most projects found here will be Assembly code
 
 You can download [here](https://downgit.github.io/#/home?url=https://github.com/nicolascoutochaves/computer-architecture/blob/master/Emulators.zip) the Assembler and the emulators for the Ramses and Cesar.
 
+--Check out the instruction set of [Ramses](https://www.inf.ufrgs.br/arq/wiki/lib/exe/fetch.php?media=wiki:ramses:resumo_das_instrucoes_do_ramses.pdf) and [Cesar](https://www.inf.ufrgs.br/arq/wiki/doku.php?id=inscesar)
+
 ## Current Processors:
 
 - Ramses
