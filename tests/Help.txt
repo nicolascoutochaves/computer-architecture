@@ -1,0 +1,67 @@
+Instructions for using MetaRamses:
+
+Copy the executable (MetaRamses.exe) to the same folder where the Ramses memory files to be tested are located.
+
+Copy the test script (<file-name>.RAC) to this same folder.
+
+Run MetaRamses.
+
+When prompted for a command file, select <file-name>.RAC.
+
+Once MetaRamses finishes (it's quite fast), a file named <file-name>.RAS will be created in the same folder, containing a description of the test results (open it with your preferred text editor to review the results).
+
+Reference times are listed in the <file-name>.RAS file under each test description.
+
+Note that MetaRamses considers all .MEM files in the folder as files to be tested.
+Therefore, to avoid undesired effects, remove any .MEM files from this folder that are not solutions to the problem.
+
+
+
+
+Commands:
+
+To control the MetaRamses application, you need to construct the file with test vectors using a series of commands.
+Any parameters for these commands are placed on the following lines, and these parameter lines end when a new command is encountered.
+
+The format of commands is a "dot" followed by a letter.
+
+There are two types of commands: PUBLIC and PRIVATE.
+PUBLIC commands can be placed in description files and given to students for testing purposes.
+PRIVATE commands generate results and perform analyses that can be used to identify potential "copies".
+
+Additionally, commands can be classified by scope: DESCRIPTION or TEST.
+
+2.1. Public Commands
+
+2.1.1. Description Scope Commands
+
+	.c Follows comments text (this command exists in both scopes).
+	.m Follows the maximum number of instructions that can be executed before indicating a time-out.
+	Useful for limiting program execution time.
+	.l Generates LOG of errors found during tests, indicating the correct value and the value provided by execution.
+	.d Generates Performance LOG, indicating the number of reads, writes, and instructions performed until HLT is reached.
+	.t Command indicating the start of a test case.
+
+2.1.2. Test Scope Command
+
+	.c Follows comment text. These comments appear in the results file.
+	.i Follows one line for each value to be loaded into memory before execution (format <end>=<data>).
+	.o Follows one line for each value to be verified in memory after execution ends (format <end>=<data>).
+	.p Follows the value that PC (Program Counter) should receive before starting program execution. If not used, the default value will be "0".
+
+2.2. Private Commands
+
+2.2.1. Description Scope Commands
+
+	.x Generates Excel result file.
+	.n Analyzes NOPs and pseudo-NOPs.
+	.av Activates code change detection.
+	.r Performs a test with program reload before each test.
+	3. Description Example
+
+See example file.
+
+
+
+
+
