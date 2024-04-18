@@ -1,17 +1,96 @@
-ORG 208
-N:	DB 0	;Number of operations
-XSUM:	DB 0	;Checksum result
-VCHAR:	DB 212	;Address of the first byte of VCHAR (21 bytes)
-VBITS:	DB 234	;Address of the first byte of VBITS (21 bytes)
+	org 208
 
-ORG 0
+	n:	db 0	;Number of operations
+	xsum:	db 0	;Checksum result
+	vchar:	db 212	;Address of the first byte of VCHAR
+	vbits:	db 252	;Address of the first byte of VBITS ;40 bytes away from vchar
+
+	dab 'Nicolas CHaves', 0
+	org 252
+	dab hff,hff
+
+	org 0
+
+Init:	
+	ldr a, #0	;Initialize registers and variables
+	ldr b, #0
+	ldr x, #0
+	str a, xsum
+	str a, n
+	str a, 229	;puts the terminator #0 in the last char
+	ldr a, #212
+	str a, vchar
+	ldr a, #252
+	str a, vbits
+
+Loop:
+	ldr b, vbits, i
+	ldr a, n
+	sub a, #8
+	jz ChangeByte
+	ldr a, vchar, i
+	jz Checksum
+		
+	shr b
+	str b, vbits, i
+	jc ToUpper
+	jmp ToLower
+
+UpdateVchar:
+	ldr a, vchar	;updates the address of the first byte without using another variable
+	add a, #1
+	str a, vchar
+	jmp Loop
+
+ChangeByte:
+	ldr a, vbits
+	add a, #1
+	str a, vbits
+	jmp Loop
+
+
+ToUpper:
+	ldr b, vchar, i
+	sub b, #92
+	jn UpdateVchar
+
+	sub a, #32
+	str a, vchar, i
+
+	ldr x, n
+	add x, #1
+	str x, n
+
+	jmp UpdateVchar
 	
-	LDR A, #0	;Initialize registers and variables
-	LDR X, #0
-	STR A, XSUM
-	STR A, N
-	STR A, 233	;puts the terminator #0 in the last char
-	LDR A, #212
-	STR A, VCHAR
-	LDR A, #234
-	STR A, VBITS
+ToLower:
+	ldr b, vchar, i
+	sub b, #92
+	jn lower
+	jmp UpdateVchar
+lower:
+	add a, #32
+	str a, vchar, i
+	
+	ldr x, n
+	add x, #1
+	str x, n
+
+	jmp UpdateVchar
+
+Checksum:
+	
+	ldr a, #212
+	str a, vchar
+
+Sum:
+	ldr b, vchar, i
+	jz End
+	add b, xsum
+	str b, xsum
+	add a #1
+	str a, vchar
+	jmp Sum
+End:
+	hlt
+	
