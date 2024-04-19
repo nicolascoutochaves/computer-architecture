@@ -5,7 +5,7 @@
 	vchar:	db 212	;Address of the first byte of VCHAR
 	vbits:	db 252	;Address of the first byte of VBITS ;40 bytes away from vchar
 
-	dab 'Nicolas CHaves', 0
+	dab 'nicolas chaves', 0
 	org 252
 	dab hff,hff
 
@@ -25,11 +25,12 @@ Init:
 
 Loop:
 	ldr b, vbits, i
-	ldr a, n
-	sub a, #8
+	sub x, #8
 	jz ChangeByte
+	add x, #9	;add x 8 + 1
 	ldr a, vchar, i
 	jz Checksum
+
 		
 	shr b
 	str b, vbits, i
@@ -43,6 +44,7 @@ UpdateVchar:
 	jmp Loop
 
 ChangeByte:
+	add x, #9	;add x 8 + 1
 	ldr a, vbits
 	add a, #1
 	str a, vbits
@@ -50,31 +52,29 @@ ChangeByte:
 
 
 ToUpper:
-	ldr b, vchar, i
-	sub b, #92
+	sub a, #92
 	jn UpdateVchar
 
-	sub a, #32
+	add a, #60	;add 92 - 32 (sub 32)
 	str a, vchar, i
 
-	ldr x, n
-	add x, #1
-	str x, n
+	ldr a, n
+	add a, #1
+	str a, n
 
 	jmp UpdateVchar
 	
 ToLower:
-	ldr b, vchar, i
-	sub b, #92
+	sub a, #92
 	jn lower
 	jmp UpdateVchar
 lower:
-	add a, #32
+	add a, #124	;add 92 + 32
 	str a, vchar, i
 	
-	ldr x, n
-	add x, #1
-	str x, n
+	ldr a, n
+	add a, #1
+	str a, n
 
 	jmp UpdateVchar
 
