@@ -1,13 +1,11 @@
-	org 208
-
+	org 207
+	
+	ptvchar:db 0	;stores the value of vchar
 	n:	db 0	;Number of operations
 	xsum:	db 0	;Checksum result
 	vchar:	db 212	;Address of the first byte of VCHAR
 	vbits:	db 252	;Address of the first byte of VBITS ;40 bytes away from vchar
 
-	dab 'nicolas chaves', 0
-	org 252
-	dab hff,hff
 
 	org 0
 
@@ -17,20 +15,17 @@ Init:
 	ldr x, #0
 	str a, xsum
 	str a, n
-	str a, 229	;puts the terminator #0 in the last char
-	ldr a, #212
-	str a, vchar
-	ldr a, #252
-	str a, vbits
+	ldr a, vchar
+	str a, ptvchar
 
 Loop:
-	ldr b, vbits, i
-	sub x, #8
-	jz ChangeByte
-	add x, #9	;add x 8 + 1
 	ldr a, vchar, i
 	jz Checksum
 
+	ldr b, vbits, i
+	sub x, #8	;x it's used for testing if vbits are over and change for the next byte
+	jz ChangeByte
+	add x, #9	;add x 8 + 1
 		
 	shr b
 	str b, vbits, i
@@ -38,7 +33,7 @@ Loop:
 	jmp ToLower
 
 UpdateVchar:
-	ldr a, vchar	;updates the address of the first byte without using another variable
+	ldr a, vchar	;updates the address of the first byte
 	add a, #1
 	str a, vchar
 	jmp Loop
@@ -52,10 +47,15 @@ ChangeByte:
 
 
 ToUpper:
-	sub a, #92
-	jn UpdateVchar
+	sub a, #123
+	jn Upper	;test if ascii code its < 122
+	jmp UpdateVchar
+Upper:
+	add a, #26	;test if ascii code its < 97
+	jn UpdateVchar	
 
-	add a, #60	;add 92 - 32 (sub 32)
+
+	add a, #65	;make upper case subtracting 32 (-123+26+65 = -32)
 	str a, vchar, i
 
 	ldr a, n
@@ -65,22 +65,24 @@ ToUpper:
 	jmp UpdateVchar
 	
 ToLower:
-	sub a, #92
+	sub a, #91	;test if ascii code its < 91
 	jn lower
 	jmp UpdateVchar
 lower:
-	add a, #124	;add 92 + 32
+	add a, #26	;test if ascii code its >= 65
+	jn UpdateVchar
+	
+	add a, #97	;make lower case adding 32 (-91+26+97 = 32)
 	str a, vchar, i
 	
 	ldr a, n
 	add a, #1
 	str a, n
-
 	jmp UpdateVchar
 
 Checksum:
 	
-	ldr a, #212
+	ldr a, ptvchar
 	str a, vchar
 
 Sum:
