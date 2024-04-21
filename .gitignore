@@ -2,3 +2,4 @@
 *.mem
 #ignore .map files
 *.map
+*.RAS

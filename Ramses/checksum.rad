@@ -3,8 +3,8 @@
 	ptvchar:db 0		;stores the value of vchar
 	n:	db 0		;Number of operations
 	xsum:	db 0		;Checksum result
-	vchar:	db 217		;Address of the first byte of VCHAR
-	vbits:	db 212	;	Address of the first byte of VBITS ;40 bytes away from vchar
+	vchar:	db 0		;Address of the first byte of VCHAR
+	vbits:	db 0		;Address of the first byte of VBITS
 	
 	org 0
 
@@ -14,18 +14,14 @@ Init:
 	str x, n
 	ldr a, vchar
 	str a, ptvchar
-
+	ldr b, vbits, i		;loads the bit array that vbits are pointing
+	ldr a, vchar, i		;loads the char that vchar are pointing
 Loop:
-	ldr a, vchar, i
 	jz Checksum		;check if the string reached the terminator #0
-
-	ldr b, vbits, i		;load the bit array that vbits are pointing
 	sub x, #8		;x is used for testing if vbits are over and change for the next byte
 	jz ChangeByte
 	add x, #9		;inc x
-		
 	shr b			;carry <- lsb(least significant bit)
-	str b, vbits, i		;update bit array with the shifted array
 	jc ToUpper		;if bit[x] == 1: touppercase; else: tolowercase
 	jmp ToLower
 
@@ -33,64 +29,64 @@ UpdateVchar:
 	ldr a, vchar		;updates the address of the first byte
 	add a, #1
 	str a, vchar
-
+	ldr a, vchar, i
 	jmp Loop
 
 ChangeByte:
 	ldr x, #0		;reset x to zero
-	ldr a, vbits		;add 1 to vbits to pointing to the next byte
+	ldr a, vbits		;add 1 in vbits to point to the next byte
 	add a, #1
 	str a, vbits
+
+	ldr b, vbits, i		;loads the next byte of vbits
+	ldr a, vchar, i		;loads the next byte of vchar
 	jmp Loop
 
 
 ToUpper:
 	sub a, #123
-	jn Upper		;test if ascii code its < 122
+	jn Upper		;test if ascii code is < 123
 	jmp UpdateVchar
 Upper:
-	add a, #26		;test if ascii code its < 97
+	add a, #26		;test if ascii code is < 97 (-123 + 26 = -97)
 	jn UpdateVchar	
 
-	add a, #65		;make upper case subtracting 32 (-123+26+65 = -32)
-	str a, vchar, i
-	
-	jsr IncN	
-	jmp UpdateVchar
+	add a, #65		;make upper case subtracting 32 (-123 + 26 + 65 = -32)	
+	jmp IncN
 	
 ToLower:
-	sub a, #91		;test if ascii code its < 91
+	sub a, #91		;test if ascii code is < 91
 	jn lower
 	jmp UpdateVchar
 lower:
-	add a, #26		;test if ascii code its >= 65
+	add a, #26		;test if ascii code is < 65 (-91 + 26 = -65)
 	jn UpdateVchar
 	
-	add a, #97		;make lower case adding 32 (-91+26+97 = 32)
-	str a, vchar, i
-	jsr IncN
+	add a, #97		;make lower case adding 32 (-91 + 26 + 97 = 32)
 	
-	jmp UpdateVchar
-IncN:				; subroutine that increments the number of changes (n)
-	nop
+	jmp IncN
+IncN:				
+	str a, vchar, i		;stores the modified char in its own byte
 	ldr a, n
-	add a, #1
+	add a, #1		;increments the number of changes (n)
 	str a, n
-	jmp IncN, i
+	jmp UpdateVchar
 
 Checksum:
 
-	ldr a, ptvchar		;replace the vchar pointed address with the addres of the first byte
-	str a, vchar
-
+	ldr a, ptvchar		;replaces the pointer at the beginning of the string
+	
 Sum:
-	ldr b, vchar, i		;test if reached the end of the string
-	jz End
+	str a, vchar		;stores the new vchar address
+	ldr b, vchar, i		
+	jz End			;test if reached the end of the string
 	add b, xsum
 	str b, xsum		;sum each ascii code 
 	add a #1
-	str a, vchar
 	jmp Sum
 End:
 	hlt
+
+
+
 	
