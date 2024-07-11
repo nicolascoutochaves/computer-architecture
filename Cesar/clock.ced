@@ -1,0 +1,122 @@
+org h7f00
+stack:
+relogio:	dw	0
+teclado:	dw	0
+cr:		db	h0d
+lf:		db	h0a
+bs:		db	h08
+
+org	hff80
+	daw	[31]
+ivet:	dw	0
+
+time:	dab	[8]
+
+	dab	[15]
+timdt:	db	0
+ints:	db	0
+inte:	db	0
+tecst:	db	0
+tecdt:	db	0
+visor:	dab	[36]
+
+org 0
+
+mov #stack, r6
+mov #20, timdt
+mov #clock, h7f00
+mov #keyboard, h7f02
+jmp h8000
+hlt
+
+
+
+clock:
+	mov #clint, ivet	;clock func interruptions
+	mov #'0', r1
+
+
+	mov #8, r3
+
+	inittime:
+		mov r1, time(r3)
+		dec r3
+		cmp r3, #-1
+		bne	inittime
+
+	mov #2, r3
+	mov #':', time(r3)
+	mov #5, r3
+	mov #':', time(r3)
+
+	clr r2	;char
+	clr r3	;cursor
+	clr r4	;timer delta seconds counter
+
+		
+	jsr	r7, printclock
+	
+
+	mov	#h83, inte
+	loop:
+		cmp r2, cr
+		beq retclock
+		br loop
+
+	retclock:
+		rts r7
+printclock:
+	clr r3
+	prtclk_loop:
+		mov time(r3), -(r6)
+		jsr r7, print
+		add #2, r6
+		cmp r3, #8
+		bne prtclk_loop
+	rts r7
+
+print:
+	mov r1, -(r6)
+	mov 4(r6), r1
+	mov r1, visor(r3)
+	inc r3
+	mov (r6)+, r1
+	rts r7
+
+clint:
+	inc r4
+	cmp r4, #4000
+	bne retclint
+	clr r4
+
+	mov #7, r3
+	add #1, time(r3)
+	cmp time(r3), #'9'
+	ble retclint
+	mov #'0' time(r3) 
+	dec r3
+	add #1, time(r3)
+	cmp time(r3), #'6'
+	ble retclint
+
+	retclint:
+	jsr r7, printclock
+	rti
+
+keyboard:
+	
+	mov #'b', visor(r1)
+	rts r7
+
+
+
+
+org h8000
+
+mov #0, r0
+jsr r7, (h7f00(r0))
+mov #2, r0
+jsr r7, (h7f00(r0))
+hlt
+
+
