@@ -23,16 +23,16 @@ visor:	dab	[36]
 org 0
 
 mov #stack, r6
-mov #20, timdt
-mov #clock, h7f00
-mov #keyboard, h7f02
+mov #250, timdt
+mov #Clock, h7f00
+mov #Keyboard, h7f02
 jmp h8000
 hlt
 
 
 
-clock:
-	mov #clint, ivet	;clock func interruptions
+Clock:
+	mov #ClkInterruption, ivet	;Clock func interruptions
 	mov #'0', r1
 
 
@@ -54,7 +54,7 @@ clock:
 	clr r4	;timer delta seconds counter
 
 		
-	jsr	r7, printclock
+	jsr	r7, PrintClock
 	
 
 	mov	#h83, inte
@@ -65,17 +65,19 @@ clock:
 
 	retclock:
 		rts r7
-printclock:
+
+	
+PrintClock:
 	clr r3
 	prtclk_loop:
 		mov time(r3), -(r6)
-		jsr r7, print
+		jsr r7, Print
 		add #2, r6
 		cmp r3, #8
 		bne prtclk_loop
 	rts r7
 
-print:
+Print:
 	mov r1, -(r6)
 	mov 4(r6), r1
 	mov r1, visor(r3)
@@ -83,27 +85,98 @@ print:
 	mov (r6)+, r1
 	rts r7
 
-clint:
-	inc r4
-	cmp r4, #4000
-	bne retclint
-	clr r4
-
+FormatClock:
 	mov #7, r3
-	add #1, time(r3)
-	cmp time(r3), #'9'
-	ble retclint
-	mov #'0' time(r3) 
-	dec r3
-	add #1, time(r3)
-	cmp time(r3), #'6'
-	ble retclint
+	FormatClock_loop:
+		cmp r3, #0
+		blt FormatClock_ret
 
-	retclint:
-	jsr r7, printclock
+		cmp r3, #2
+		beq Dec_r3
+		cmp r3, #5
+		beq Dec_r3
+
+
+		cmp r3, #7
+		beq inc_decimal
+		cmp r3, #4
+		beq inc_decimal
+		cmp r3, #1
+		beq inc_decimal
+
+		cmp time(r3), #'6'
+		blt Dec_r3
+		mov #'0', time(r3)
+		dec r3
+		dec r3
+		cmp r3, #0
+		blt reinc_r3twice
+		add #1, time(r3)
+		reinc_r3twice:
+			inc r3
+			inc r3
+		br Dec_r3
+
+		inc_decimal:
+			cmp time(r3), #'9'
+			ble Dec_r3
+			mov #'0', time(r3)
+			dec r3
+			cmp r3, #0
+			blt reinc_r3
+			add #1, time(r3)
+			reinc_r3:
+				inc r3
+		Dec_r3:
+			dec r3
+			br FormatClock_Loop
+	FormatClock_ret:
+		rts r7
+		
+
+ClkInterruption:
+	cmp ints, #h82	;Keyboard
+	beq clkint_keyboard
+
+	clkint_clock:
+		inc r4
+		cmp r4, #4
+		bne clkint_return
+		clr r4
+
+		mov #7, r3
+		add #1, time(r3)
+		br clkint_return
+		;cmp time(r3), #'9'
+		;ble clkint_return
+		;mov #'0' time(r3) 
+		;dec r3
+		;add #1, time(r3)
+		;cmp time(r3), #'6'
+		;ble clkint_return
+
+	clkint_keyboard:
+		cmp tecdt,#'h'
+		beq inchours
+		cmp tecdt, #'m'
+		beq incminutes
+		br clkint_return
+		inchours:
+			mov #1, r3
+			add #1, time(r3)
+			br clkint_return
+		incminutes:
+			mov #4, r3
+			add #1, time(r3)
+
+	clkint_return:
+	jsr r7, FormatClock
+	jsr r7, PrintClock
+	clr tecst
+	clr ints
 	rti
 
-keyboard:
+Keyboard:
 	
 	mov #'b', visor(r1)
 	rts r7
@@ -118,5 +191,4 @@ jsr r7, (h7f00(r0))
 mov #2, r0
 jsr r7, (h7f00(r0))
 hlt
-
 
