@@ -2,9 +2,7 @@ org h7f00
 stack:
 relogio:	dw	0
 teclado:	dw	0
-cr:		db	h0d
-lf:		db	h0a
-bs:		db	h08
+exit:		db	0
 
 org	hff80
 	daw	[31]
@@ -56,15 +54,14 @@ Clock:
 		
 	jsr	r7, PrintClock
 	
-
+	
+	clr exit
 	mov	#h83, inte
 	loop:
-		cmp r2, cr
-		beq retclock
-		br loop
+		cmp exit, #0
+		beq loop
 
-	retclock:
-		rts r7
+	rts r7
 
 	
 PrintClock:
@@ -76,6 +73,9 @@ PrintClock:
 		cmp r3, #8
 		bne prtclk_loop
 	rts r7
+
+	
+
 
 Print:
 	mov r1, -(r6)
@@ -147,19 +147,18 @@ ClkInterruption:
 		mov #7, r3
 		add #1, time(r3)
 		br clkint_return
-		;cmp time(r3), #'9'
-		;ble clkint_return
-		;mov #'0' time(r3) 
-		;dec r3
-		;add #1, time(r3)
-		;cmp time(r3), #'6'
-		;ble clkint_return
 
 	clkint_keyboard:
+		jsr r7, ToLowerCase
+		cmp tecdt, #h0d	;cr
+		beq finish
 		cmp tecdt,#'h'
 		beq inchours
 		cmp tecdt, #'m'
 		beq incminutes
+		cmp tecdt, #'z'
+		bne clkint_return
+		jsr r7, ClearClock
 		br clkint_return
 		inchours:
 			mov #1, r3
@@ -168,6 +167,9 @@ ClkInterruption:
 		incminutes:
 			mov #4, r3
 			add #1, time(r3)
+			br clkint_return
+		finish:
+			mov #hff exit
 
 	clkint_return:
 	jsr r7, FormatClock
@@ -175,6 +177,42 @@ ClkInterruption:
 	clr tecst
 	clr ints
 	rti
+
+ToLowerCase:
+	mov r1, -(r6)
+	mov tecdt, r1
+	
+	cmp r1, #91
+	bge tolower_ret
+	cmp r1, #65
+	blt tolower_ret
+	
+	add #32, tecdt
+
+	tolower_ret:
+		mov (r6)+, r1
+		rts r7
+	
+
+ClearClock:
+	mov r1, -(r6)
+	mov #'0', r1
+	mov #7, r3
+	clearclock_loop:
+		tst r3
+		blt clearclock_ret
+		cmp time(r3), #':'
+		beq clearclock_decr3
+		mov r1, time(r3)
+		clearclock_decr3:
+			dec r3
+		br clearclock_loop
+
+	clearclock_ret:
+		mov (r6)+, r1
+		rts, r7
+	
+
 
 Keyboard:
 	
