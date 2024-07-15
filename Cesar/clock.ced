@@ -8,33 +8,168 @@ org	hff80
 	daw	[31]
 ivet:	dw	0
 
-time:	dab	[8]
-
-	dab	[15]
+	dab	[23]
 timdt:	db	0
 ints:	db	0
 inte:	db	0
 tecst:	db	0
 tecdt:	db	0
-visor:	dab	[36]
+time:					;vetor timer e string compartilham memoria
+string:
+display:	dab	[36]
+
+
 
 org 0
-
 mov #stack, r6
 mov #250, timdt
-mov #Clock, h7f00
-mov #Keyboard, h7f02
+mov #ClockProgram, h7f00
+mov #StringProgram, h7f02
 jmp h8000
 hlt
 
 
+FormatClock:
+	mov r1, -(r6)			;salva contexto de r1
+	mov r2, -(r6)			;salva contexto de r2
+	mov #'0', r2
+	mov #7, r3
+	FormatClock_clock_loop:
+		tst r3
+		blt FormatClock_ret
+		
+		mov time(r3), r1
 
-Clock:
-	mov #ClkInterruption, ivet	;Clock func interruptions
+		cmp r3, #2
+		beq Dec_r3
+		cmp r3, #5
+		beq Dec_r3
+
+		cmp r3, #7
+		beq inc_decimal
+		cmp r3, #4
+		beq inc_decimal
+		cmp r3, #1
+		beq inc_decimal
+		tst r3
+		beq change_day
+
+		cmp r1, #'6'
+		blt Dec_r3
+		mov r2, r1
+		dec r3
+		dec r3
+		tst r3
+		blt reinc_r3twice
+		add #1, time(r3)
+		reinc_r3twice:
+			inc r3
+			inc r3
+		br Dec_r3
+		
+
+		inc_decimal:
+			cmp r1, #'9'
+			ble Dec_r3
+			mov r2, r1
+			dec r3
+			tst r3
+			blt reinc_r3
+			add #1, time(r3)
+			reinc_r3:
+				inc r3
+		Dec_r3:
+			mov r1, time(r3)
+			dec r3
+			br FormatClock_clock_loop
+
+		change_day:
+			
+			cmp r1, #'2'
+			bne Dec_r3
+			inc r3
+			cmp time(r3), #'4'
+			blt not_change
+			mov r2, r1
+			mov r1, time(r3)
+			not_change:
+				dec r3
+				br Dec_r3
+		
+	FormatClock_ret:
+		mov (r6)+, r2			;recupera contexto de registradores
+		mov (r6)+, r1
+		rts r7
+
+ToLowerCase:
+	mov r1, -(r6)
+	mov tecdt, r1
+	
+	cmp r1, #91
+	bge tolower_ret
+	cmp r1, #65
+	blt tolower_ret
+	
+	add #32, tecdt
+
+	tolower_ret:
+		mov (r6)+, r1
+		rts r7
+
+ClearDisplay:
+	mov r3, -(r6)
+	mov #35, r3
+	cleardisplay_loop:
+		mov #' ', display(r3)
+		dec r3
+		bge cleardisplay_loop
+	mov (r6)+, r3
+	rts r7
+
+Print:
+	mov r1, -(r6)
+	mov 4(r6), r1
+	mov r1, display(r3)
+	inc r3
+	mov (r6)+, r1
+	rts r7
+
+
+PrintClock:
+	clr r3
+	prtclk_clock_loop:
+		mov time(r3), -(r6)
+		jsr r7, Print
+		add #2, r6
+		cmp r3, #8
+		bne prtclk_clock_loop
+	rts r7
+
+ClearClock:
+	mov r1, -(r6)
+	mov #'0', r1
+	mov #7, r3
+	clearclock_clock_loop:
+		tst r3
+		blt clearclock_ret
+		cmp time(r3), #':'
+		beq clearclock_decr3
+		mov r1, time(r3)
+		clearclock_decr3:
+			dec r3
+		br clearclock_clock_loop
+
+	clearclock_ret:
+		mov (r6)+, r1
+		rts, r7
+
+
+ClockProgram:
+	mov #ClockProgramInterruptions, ivet	;Clock Program interruptions
 	mov #'0', r1
 
 
-	mov #8, r3
+	mov #7, r3
 
 	inittime:
 		mov r1, time(r3)
@@ -57,86 +192,22 @@ Clock:
 	
 	clr exit
 	mov	#h83, inte
-	loop:
+	clock_loop:
 		cmp exit, #0
-		beq loop
+		beq clock_loop
 
+	jsr r7, ClearDisplay
+	mov #0, inte
 	rts r7
 
-	
-PrintClock:
-	clr r3
-	prtclk_loop:
-		mov time(r3), -(r6)
-		jsr r7, Print
-		add #2, r6
-		cmp r3, #8
-		bne prtclk_loop
-	rts r7
-
-	
-
-
-Print:
-	mov r1, -(r6)
-	mov 4(r6), r1
-	mov r1, visor(r3)
-	inc r3
-	mov (r6)+, r1
-	rts r7
-
-FormatClock:
-	mov #7, r3
-	FormatClock_loop:
-		cmp r3, #0
-		blt FormatClock_ret
-
-		cmp r3, #2
-		beq Dec_r3
-		cmp r3, #5
-		beq Dec_r3
-
-
-		cmp r3, #7
-		beq inc_decimal
-		cmp r3, #4
-		beq inc_decimal
-		cmp r3, #1
-		beq inc_decimal
-
-		cmp time(r3), #'6'
-		blt Dec_r3
-		mov #'0', time(r3)
-		dec r3
-		dec r3
-		cmp r3, #0
-		blt reinc_r3twice
-		add #1, time(r3)
-		reinc_r3twice:
-			inc r3
-			inc r3
-		br Dec_r3
-
-		inc_decimal:
-			cmp time(r3), #'9'
-			ble Dec_r3
-			mov #'0', time(r3)
-			dec r3
-			cmp r3, #0
-			blt reinc_r3
-			add #1, time(r3)
-			reinc_r3:
-				inc r3
-		Dec_r3:
-			dec r3
-			br FormatClock_Loop
-	FormatClock_ret:
-		rts r7
 		
-
-ClkInterruption:
-	cmp ints, #h82	;Keyboard
-	beq clkint_keyboard
+ClockProgramInterruptions:
+	cmp r3, #36
+	bne compare_source
+	clr r3
+	compare_source:
+		cmp ints, #h82	;StringProgram
+		beq clkint_keyboard
 
 	clkint_clock:
 		inc r4
@@ -178,49 +249,71 @@ ClkInterruption:
 	clr ints
 	rti
 
-ToLowerCase:
-	mov r1, -(r6)
-	mov tecdt, r1
-	
-	cmp r1, #91
-	bge tolower_ret
-	cmp r1, #65
-	blt tolower_ret
-	
-	add #32, tecdt
 
-	tolower_ret:
-		mov (r6)+, r1
-		rts r7
-	
-
-ClearClock:
-	mov r1, -(r6)
-	mov #'0', r1
-	mov #7, r3
-	clearclock_loop:
-		tst r3
-		blt clearclock_ret
-		cmp time(r3), #':'
-		beq clearclock_decr3
-		mov r1, time(r3)
-		clearclock_decr3:
-			dec r3
-		br clearclock_loop
-
-	clearclock_ret:
-		mov (r6)+, r1
-		rts, r7
-	
-
-
-Keyboard:
-	
-	mov #'b', visor(r1)
+StringProgram:
+	mov #StringProgramInterruptions, ivet
+	mov #'_', r0
+	clr r3
+	mov r0, display(r3)
+	mov #h83, inte
+	clr exit
+	keyboard_loop:
+		tst exit
+		beq keyboard_loop
 	rts r7
 
+StringProgramInterruptions:
+	cmp ints, #h82			;Keyboard
+	beq special_characters
 
+	not r0
+	mov r0, -(r6)
+	jsr r7, Print
+	dec r3
+	add #2, r6
+	br keyinterruptret
 
+	special_characters:
+		mov tecdt, r1
+		cmp r1, #h0d		;cr
+		beq reset_cursor
+		cmp r1, #h0a		;lf
+		beq clr_display
+		cmp r1, #h08		;bsp
+		beq backspace
+		cmp r1, #h06		;ack (ctrl + f)
+		beq finish_keyboard
+		br print_char
+		
+		reset_cursor:
+			mov #0, r3
+			br keyinterruptret
+		clr_display:
+			jsr r7, ClearDisplay
+			br keyinterruptret
+		backspace:
+			mov #' ', display(r3)
+			cmp r3, #0
+			beq keyinterruptret
+			dec r3
+			br keyinterruptret
+
+	print_char:
+		mov tecdt, -(r6)
+		jsr r7, Print
+		add #2, r6
+		br keyinterruptret
+
+	finish_keyboard:
+		mov #hff, exit
+		
+	
+	keyinterruptret:
+		clr ints
+		clr tecst
+		
+		rti	
+	
 
 org h8000
 
@@ -229,4 +322,3 @@ jsr r7, (h7f00(r0))
 mov #2, r0
 jsr r7, (h7f00(r0))
 hlt
-
