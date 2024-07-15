@@ -204,6 +204,7 @@ ClockProgram:
 ClockProgramInterruptions:
 	cmp r3, #36
 	bne compare_source
+	jsr r7, ClearDisplay
 	clr r3
 	compare_source:
 		cmp ints, #h82	;StringProgram
@@ -251,6 +252,7 @@ ClockProgramInterruptions:
 
 
 StringProgram:
+	jsr r7, ClearDisplay
 	mov #StringProgramInterruptions, ivet
 	mov #'_', r0
 	clr r3
@@ -260,12 +262,17 @@ StringProgram:
 	keyboard_loop:
 		tst exit
 		beq keyboard_loop
+	jsr r7, ClearDisplay
 	rts r7
 
 StringProgramInterruptions:
-	cmp ints, #h82			;Keyboard
-	beq special_characters
-
+	cmp r3, #36
+	bne String_compare_sources
+	clr r3
+	jsr r7, ClearDisplay
+	String_compare_sources:
+		cmp ints, #h82			;Keyboard
+		beq special_characters
 	not r0
 	mov r0, -(r6)
 	jsr r7, Print
@@ -286,7 +293,8 @@ StringProgramInterruptions:
 		br print_char
 		
 		reset_cursor:
-			mov #0, r3
+			mov #' ', display(r3)
+			clr r3
 			br keyinterruptret
 		clr_display:
 			jsr r7, ClearDisplay
