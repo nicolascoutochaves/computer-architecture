@@ -223,7 +223,7 @@ ClockProgramInterruptions:
 
 	clkint_keyboard:
 		jsr r7, ToLowerCase				;converte o caractere recebido do teclado para minusculo
-		cmp tecdt, #h0d					;verifica se o caractere recebido e um enter
+		cmp tecdt, #h06					;ack (ctrl + f)
 		beq finish					;se for, sai do programa
 								;se nao for, verifica se e um dos caracteres especiais
 		cmp tecdt,#'h'
@@ -300,7 +300,17 @@ StringProgramInterruptions:
 		cmp r1, #h06					;ack (ctrl + f)
 		beq finish_keyboard
 		br print_char
+
+
+;Aqui o retorno da interrupcao foi movido por extrapolar os 128 bits de desvio condicional
+keyinterruptret:
+		clr ints
+		clr tecst
+		rti
 		
+
+
+
 		reset_cursor:
 			cmp display(r3), #'_' 			;se o caracter do display NAO for o cursor, apenas reseta o cursor
 			bne just_reset_cursor
@@ -317,10 +327,25 @@ StringProgramInterruptions:
 			jsr r7, ClearDisplay
 			br keyinterruptret
 		backspace:
-			mov #' ', display(r3)			;apaga o caracter onde o cursor esta, colocando um espaco no lugar					
+
+			;realiza uma serie de verificacoes preliminares para apagar apenas o caracter atras do cursor
+			;e manter o caracter que o cursor esta sobrepondo (parecido com o codigo que reseta o cursor)
+
+			cmp display(r3), #'_' 			;se o caracter do display NAO for o cursor, apenas decrementa o cursor
+			bne just_dec_r3
+			clr display(r3)				;caso contrario, limpa o display
+			cmp r0, #'_'				;verifica se ha um caracter em r0, proveniente da rotacao
+			beq mov_r5				;coloca o caracter de volta no display antes de resetar o cursor (para nao apagar o caracter que o cursor esta sobrepondo)
+			mov r0, display(r3)
+			mov_r5:					;se houver um '_' no display e em r0, certamente em r5 havera um caracter que deve ser colocado de volta no display
+				mov r5, display(r3)
+
+
+			just_dec_r3:
 			cmp r3, #0
 			beq keyinterruptret
 			dec r3
+			mov #' ', display(r3)			;move um espaço para a poicao anterior ao cursor
 			br keyinterruptret
 
 	print_char:						;imprime o caracter recebido do teclado no display
@@ -331,14 +356,8 @@ StringProgramInterruptions:
 
 	finish_keyboard:
 		mov #hff, exit					;finaliza o programa ao receber o caracter de finalizacao (ctrl + f)
+		br keyinterruptret
 		
-	
-	keyinterruptret:
-	
-		clr ints
-		clr tecst
-		
-		rti	
 	
 
 org h8000
