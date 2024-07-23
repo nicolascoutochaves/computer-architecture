@@ -1,8 +1,8 @@
 org h7f00
 stack:
-relogio:	dw	0						;ponteiro para programa do relogio
-teclado:	dw	0						;ponteiro para programa do teclado
-exit:		db	0						;flag de saida do programa
+relogio:	dw	0					;ponteiro para programa do relogio
+teclado:	dw	0					;ponteiro para programa do teclado
+exit:		db	0					;flag de saida do programa
 
 
 ;Inicializacoes de alguns enderecos proprios da cpu
@@ -16,7 +16,7 @@ ints:	db	0
 inte:	db	0
 tecst:	db	0
 tecdt:	db	0
-time:									;vetor timer e string compartilham memoria
+time:								;vetor timer e string compartilham memoria
 string:
 display:	dab	[36]
 
@@ -28,7 +28,7 @@ mov #stack, r6							;stack comeca em h7f00
 mov #250, timdt							;tempo de interrupcao em 250ms
 mov #ClockProgram, h7f00
 mov #StringProgram, h7f02
-jmp h8000								;pula para endereco onde serao chamadas as funcoes iniciais dos programas
+jmp h8000							;pula para endereco onde serao chamadas as funcoes iniciais dos programas
 hlt
 
 ;Registrador r3 sera usado como cursor durante todo o programa
@@ -39,7 +39,7 @@ FormatClock:							;formata o relogio para exibicao
 	mov r2, -(r6)						;salva contexto de r2
 	mov #'0', r2						;salva o char '0' em r2 para zerar o relogio com menos acessos a memoria
 	mov #7, r3
-	FormatClock_clock_loop:				;loop de formatacao
+	FormatClock_clock_loop:					;loop de formatacao
 		tst r3
 		blt FormatClock_ret
 		
@@ -64,7 +64,7 @@ FormatClock:							;formata o relogio para exibicao
 		cmp r1, #'6'
 		blt Dec_r3
 		mov r2, r1
-		dec r3							;decrementa cursor duas vezes para pular o caractere ':'
+		dec r3						;decrementa cursor duas vezes para pular o caractere ':'
 		dec r3
 		tst r3
 		blt reinc_r3twice
@@ -91,7 +91,7 @@ FormatClock:							;formata o relogio para exibicao
 			br FormatClock_clock_loop
 
 
-		change_day:						;resolve o problema de mudanca de dia apos 23:59
+		change_day:					;resolve o problema de mudanca de dia apos 23:59
 			
 			cmp r1, #'2'
 			bne Dec_r3
@@ -111,7 +111,7 @@ FormatClock:							;formata o relogio para exibicao
 
 ToLowerCase:							;converte o caractere recebido do teclado para minusculo
 	mov r1, -(r6)
-	mov tecdt, r1						;salva o caractere recebido do teclado em r1 para reduzir acessos a memoria nas comparaÃ§oes
+	mov tecdt, r1						;salva o caractere recebido do teclado em r1 para reduzir acessos a memoria nas comparaçoes
 	
 	cmp r1, #91
 	bge tolower_ret
@@ -126,34 +126,34 @@ ToLowerCase:							;converte o caractere recebido do teclado para minusculo
 
 ClearDisplay:							;limpa o display e mantem o cursor na mesma posicao
 	mov r3, -(r6)						;salva a posicao do cursor
-	mov #35, r3							;inicializa o cursor na ultima posicao do display
+	mov #35, r3						;inicializa o cursor na ultima posicao do display
 	cleardisplay_loop:					;loop de limpeza
 		mov #' ', display(r3)
 		dec r3
 		bge cleardisplay_loop
-	mov (r6)+, r3						;recupera a posicao do cursor anterior Ã  limpeza
+	mov (r6)+, r3						;recupera a posicao do cursor anterior à limpeza
 	rts r7
 
-Print:									;imprime o caractere passado por parametro na stack
+Print:								;imprime o caractere passado por parametro na stack
 	mov r1, -(r6)						;salva contexto de r1
 	mov 4(r6), r1						;salva o caractere passado por parametro em r1
 	mov r1, display(r3)					;imprime o caractere no display
-	inc r3								;incrementa o cursor
+	inc r3							;incrementa o cursor
 	mov (r6)+, r1						;recupera contexto de r1	
 	rts r7
 
 
-PrintClock:								;imprime o relogio no display
+PrintClock:							;imprime o relogio no display
 	clr r3
 	prtclk_clock_loop:					;loop de impressao que imprime os 8 caracteres do relogio
 		mov time(r3), -(r6)				;utiliza a rotina de impressao para imprimir o caractere
 		jsr r7, Print
-		add #2, r6						;retorna o ponteiro da stack para a posicao anterior
+		add #2, r6					;retorna o ponteiro da stack para a posicao anterior
 		cmp r3, #8
 		bne prtclk_clock_loop
 	rts r7
 
-ClearClock:								;limpa o relogio mantendo a formatacao
+ClearClock:							;limpa o relogio mantendo a formatacao
 	mov r1, -(r6)
 	mov #'0', r1
 	mov #7, r3
@@ -173,12 +173,12 @@ ClearClock:								;limpa o relogio mantendo a formatacao
 
 
 ClockProgram:							;programa principal do relogio
-	mov #ClockProgramInterruptions, ivet	;configura a rotina de interrupcao
+	mov #ClockProgramInterruptions, ivet			;configura a rotina de interrupcao
 	mov #'0', r1						;salva o caractere '0' em r1 para economizar acessos a memoria e instrucoes
 
 	mov #7, r3
 
-	inittime:							;inicializa o vetor do relogio com 00000000
+	inittime:						;inicializa o vetor do relogio com 00000000
 		mov r1, time(r3)
 		dec r3
 		cmp r3, #-1
@@ -189,19 +189,19 @@ ClockProgram:							;programa principal do relogio
 	mov #5, r3
 	mov #':', time(r3)
 
-	clr r3								;cursor
-	clr r4								;contador de interrupcoes (4 interrupcoes = 1 segundo)
+	clr r3							;cursor
+	clr r4							;contador de interrupcoes (4 interrupcoes = 1 segundo)
 
 
 	
 	
 	clr exit
-	mov	#h83, inte						;ativa interrupcao do teclado e do timer
+	mov	#h83, inte					;ativa interrupcao do teclado e do timer
 	clock_loop:
 		cmp exit, #0
 		beq clock_loop
 
-	jsr r7, ClearDisplay				;limpa o display apos a saida do programa
+	jsr r7, ClearDisplay					;limpa o display apos a saida do programa
 	mov #0, inte						;desativa interrupcoes
 	rts r7
 
@@ -213,7 +213,7 @@ ClockProgramInterruptions:
 
 	clkint_clock:
 		inc r4
-		cmp r4, #4						;verifica se passaram 4 interrupcoes (1 segundo)
+		cmp r4, #4					;verifica se passaram 4 interrupcoes (1 segundo)
 		bne clkint_return
 		clr r4
 
@@ -224,8 +224,8 @@ ClockProgramInterruptions:
 	clkint_keyboard:
 		jsr r7, ToLowerCase				;converte o caractere recebido do teclado para minusculo
 		cmp tecdt, #h0d					;verifica se o caractere recebido e um enter
-		beq finish						;se for, sai do programa
-										;se nao for, verifica se e um dos caracteres especiais
+		beq finish					;se for, sai do programa
+								;se nao for, verifica se e um dos caracteres especiais
 		cmp tecdt,#'h'
 		beq inchours
 		cmp tecdt, #'m'
@@ -235,22 +235,22 @@ ClockProgramInterruptions:
 		jsr r7, ClearClock
 		br clkint_return
 
-		inchours:						;incrementa as horas
+		inchours:					;incrementa as horas
 			mov #1, r3
 			add #1, time(r3)
 			br clkint_return
-		incminutes:						;incrementa os minutos
+		incminutes:					;incrementa os minutos
 			mov #4, r3
 			add #1, time(r3)
 			br clkint_return
-		finish:							;sai do programa
+		finish:						;sai do programa
 			mov #hff exit
 
 	clkint_return:
 	jsr r7, FormatClock					;formata o relogio para exibicao
 	jsr r7, PrintClock					;imprime o relogio no display
-	clr tecst							;limpa o buffer do teclado
-	clr ints							;limpa a flag de interrupcao
+	clr tecst						;limpa o buffer do teclado
+	clr ints						;limpa a flag de interrupcao
 	rti
 
 
@@ -258,18 +258,18 @@ StringProgram:
 	jsr r7, ClearDisplay
 	mov #StringProgramInterruptions, ivet
 	mov #'_', r0
-	clr r5								;temporario para a rotacao do cursor e caracter do diplay
+	clr r5							;temporario para a rotacao do cursor e caracter do diplay
 	clr r3
 	mov #h83, inte						;ativa interrupcao do teclado e do timer
 	clr exit
 	keyboard_loop:
 		tst exit
 		beq keyboard_loop
-	jsr r7, ClearDisplay				;limpa o display apos a saida do programa
+	jsr r7, ClearDisplay					;limpa o display apos a saida do programa
 	rts r7
 
 StringProgramInterruptions:
-	cmp r3, #36							;Limpa o display quando o cursor chega ao final para evitar sobrescrita de memoria
+	cmp r3, #36						;Limpa o display quando o cursor chega ao final para evitar sobrescrita de memoria
 	bne compare_source
 	clr r3
 	jsr r7, ClearDisplay
@@ -282,7 +282,7 @@ StringProgramInterruptions:
 	;rotacao do cursor e caracter no display
 	mov display(r3), r5					;salva o caractere do display em r5
 	mov r0, display(r3)					;salva o caractere recebido do teclado no display
-	mov r5, r0							;salva o caractere do display em r0
+	mov r5, r0						;salva o caractere do display em r0
 	
 
 	br keyinterruptret
@@ -302,13 +302,13 @@ StringProgramInterruptions:
 		br print_char
 		
 		reset_cursor:
-			cmp display(r3), #'_' 		;se o caracter do display NAO for o cursor, apenas reseta o cursor
+			cmp display(r3), #'_' 			;se o caracter do display NAO for o cursor, apenas reseta o cursor
 			bne just_reset_cursor
 			clr display(r3)				;caso contrario, limpa o display
 			cmp r0, #'_'				;verifica se ha um caracter em r0, proveniente da rotacao
-			beq move_r5					;coloca o caracter de volta no display antes de resetar o cursor (para nao apagar o caracter que o cursor esta sobrepondo)
+			beq move_r5				;coloca o caracter de volta no display antes de resetar o cursor (para nao apagar o caracter que o cursor esta sobrepondo)
 			mov r0, display(r3)
-			move_r5:					;se houver um '_' no display e em r0, certamente em r5 havera um caracter que deve ser colocado de volta no display
+			move_r5:				;se houver um '_' no display e em r0, certamente em r5 havera um caracter que deve ser colocado de volta no display
 				mov r5, display(r3)
 			just_reset_cursor:
 				clr r3
@@ -316,14 +316,14 @@ StringProgramInterruptions:
 		clr_display:
 			jsr r7, ClearDisplay
 			br keyinterruptret
-		backspace:						;apaga o caracter onde o cursor esta, colocando um espaco no lugar
-			mov #' ', display(r3)
+		backspace:
+			mov #' ', display(r3)			;apaga o caracter onde o cursor esta, colocando um espaco no lugar					
 			cmp r3, #0
 			beq keyinterruptret
 			dec r3
 			br keyinterruptret
 
-	print_char:							;imprime o caracter recebido do teclado no display
+	print_char:						;imprime o caracter recebido do teclado no display
 		mov tecdt, -(r6)
 		jsr r7, Print
 		add #2, r6
