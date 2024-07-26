@@ -4,43 +4,57 @@ relogio:	dw	0					;ponteiro para programa do relogio
 teclado:	dw	0					;ponteiro para programa do teclado
 exit:		db	0					;flag de saida do programa
 
+;====================================================================================================================================================================
+;					AREA RESERVADA
 
-;Inicializacoes de alguns enderecos proprios da cpu
 org	hff80
-	daw	[31]
-ivet:	dw	0
-
-	dab	[23]
-timdt:	db	0
-ints:	db	0
-inte:	db	0
-tecst:	db	0
-tecdt:	db	0
+	daw	[31]						;31 palavras reservadass
+ivet:	dw	0						;Vetor que guarda o tratador de interrupcoess
+	dab	[23]						;23 bytes reservados
+timdt:	db	0						;timer delta time
+ints:	db	0						;interruptions status
+inte:	db	0						;interruptions enable
+tecst:	db	0						;teclado status
+tecdt:	db	0						;teclado data
 time:								;vetor timer e string compartilham memoria
 string:
 display:	dab	[36]
 
+;					AREA RESERVADA
+;====================================================================================================================================================================
 
 
+;====================================================================================================================================================================
+;					INICIALIZACAO
 org 0
 
+;		Inicialização de stack, delta time e ponteiros para as regioes dos dois programas
 mov #stack, r6							;stack comeca em h7f00
 mov #250, timdt							;tempo de interrupcao em 250ms
 mov #ClockProgram, h7f00
 mov #StringProgram, h7f02
 jmp h8000							;pula para endereco onde serao chamadas as funcoes iniciais dos programas
-hlt
-
-;Registrador r3 sera usado como cursor durante todo o programa
 
 
-FormatClock:							;formata o relogio para exibicao
+;====================================================================================================================================================================
+
+;		____________________________________________________________________________________________
+;		|Registrador r3 sera usado como cursor durante todo o programa (Acesssos via modo indexado)|
+;		--------------------------------------------------------------------------------------------
+
+
+
+;====================================================================================================================================================================
+;					ALGUMAS ROTINAS IMPORTANTES
+
+
+FormatClock:							;funcao que formata o relogio para exibicao
 	mov r1, -(r6)						;salva contexto de r1
 	mov r2, -(r6)						;salva contexto de r2
-	mov #'0', r2						;salva o char '0' em r2 para zerar o relogio com menos acessos a memoria
+	mov #'0', r2						;salva o char '0' em r2 para zerar o relogio com menos acessos a memoria e instrucoes
 	mov #7, r3
 	FormatClock_clock_loop:					;loop de formatacao
-		tst r3
+		tst r3						;verifica se o cursor < 0
 		blt FormatClock_ret
 		
 		mov time(r3), r1
@@ -63,45 +77,43 @@ FormatClock:							;formata o relogio para exibicao
 
 		cmp r1, #'6'
 		blt Dec_r3
-		mov r2, r1
+		mov r2, r1					;coloca char '0' em r1 se passou de 6
 		dec r3						;decrementa cursor duas vezes para pular o caractere ':'
 		dec r3
-		tst r3
-		blt reinc_r3twice
-		add #1, time(r3)
+		tst r3		
+		blt reinc_r3twice				;se r3 for menor que 0, entao extrapolou a memoria e deve apenas ser reincrementado
+		add #1, time(r3)				;soma 1 no caracter anterior ao que atingiu o valor '6'.
 		reinc_r3twice:
 			inc r3
 			inc r3
-		br Dec_r3
+		br Dec_r3					;retorna a parte do loop que decrementa r3 para verificar o proximo digito
 		
 
 		inc_decimal:
-			cmp r1, #'9'
+			cmp r1, #'9'				;verifica se caracter das unidades passou de 9
 			ble Dec_r3
-			mov r2, r1
-			dec r3
-			tst r3
-			blt reinc_r3
+			mov r2, r1				;se passou, recebe '0' e o caracter de tras e somado 1
+			dec r3					
 			add #1, time(r3)
 			reinc_r3:
 				inc r3
 		Dec_r3:
-			mov r1, time(r3)
-			dec r3
+			mov r1, time(r3)			;move as alteracoes de r1 para o vetor do relogio
+			dec r3					;decrementa cursor para ir para proximo caractere
 			br FormatClock_clock_loop
 
 
 		change_day:					;resolve o problema de mudanca de dia apos 23:59
 			
-			cmp r1, #'2'
+			cmp r1, #'2'				;verifica se os primeiros bytes atingiram '2' e '4' simultaneamente
 			bne Dec_r3
 			inc r3
 			cmp time(r3), #'4'
 			blt not_change
-			mov r2, r1
-			mov r1, time(r3)
+			mov r2, r1				;zera a parte do '4'
+			mov r1, time(r3)			
 			not_change:
-				dec r3
+				dec r3				;decrementa r3 para voltar para o loop e zerar a parte do '2' tambem
 				br Dec_r3
 		
 	FormatClock_ret:
@@ -109,20 +121,24 @@ FormatClock:							;formata o relogio para exibicao
 		mov (r6)+, r1
 		rts r7
 
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ToLowerCase:							;converte o caractere recebido do teclado para minusculo
-	mov r1, -(r6)
+	mov r1, -(r6)						;salva contexto de r1
 	mov tecdt, r1						;salva o caractere recebido do teclado em r1 para reduzir acessos a memoria nas comparaçoes
 	
+	;verifica se o char recebido e minusculo. Se for, nao faz nada
 	cmp r1, #91
 	bge tolower_ret
 	cmp r1, #65
 	blt tolower_ret
 	
-	add #32, tecdt
-
+	add #32, tecdt						;se o char recebido nao for minusculo, soma 32 para fazer a converssao
 	tolower_ret:
-		mov (r6)+, r1
+		mov (r6)+, r1					;recupera contexto de r1
 		rts r7
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ClearDisplay:							;limpa o display e mantem o cursor na mesma posicao
 	mov r3, -(r6)						;salva a posicao do cursor
@@ -134,6 +150,8 @@ ClearDisplay:							;limpa o display e mantem o cursor na mesma posicao
 	mov (r6)+, r3						;recupera a posicao do cursor anterior à limpeza
 	rts r7
 
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Print:								;imprime o caractere passado por parametro na stack
 	mov r1, -(r6)						;salva contexto de r1
 	mov 4(r6), r1						;salva o caractere passado por parametro em r1
@@ -142,6 +160,7 @@ Print:								;imprime o caractere passado por parametro na stack
 	mov (r6)+, r1						;recupera contexto de r1	
 	rts r7
 
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 PrintClock:							;imprime o relogio no display
 	clr r3
@@ -153,30 +172,39 @@ PrintClock:							;imprime o relogio no display
 		bne prtclk_clock_loop
 	rts r7
 
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ClearClock:							;limpa o relogio mantendo a formatacao
-	mov r1, -(r6)
-	mov #'0', r1
-	mov #7, r3
-	clearclock_clock_loop:
-		tst r3
+	mov r1, -(r6)						;salva contexto de r1
+	mov #'0', r1						;deixa o char '0' em r1 para facilitar
+	mov #7, r3						;coloca o cursor no ultimo digito do relogio
+	clearclock_clock_loop:					;loop de limpeza
+		tst r3						;verifica se r3 e < 0 e retorna da funcao se verdadeiro
 		blt clearclock_ret
 		cmp time(r3), #':'				;verifica se o caractere e um dos dois pontos para nao ser apagado
-		beq clearclock_decr3
-		mov r1, time(r3)
+		beq clearclock_decr3				;pula a parte de apagar se o char for igual a ':'
+		mov r1, time(r3)				;move '0' para o caracter atual
 		clearclock_decr3:
 			dec r3
 		br clearclock_clock_loop
 
 	clearclock_ret:
-		mov (r6)+, r1
-		rts, r7
+		clr r4						;limpa r4 para que os segundos contem a partir de 0ms
+		mov (r6)+, r1					;recupera contexto de r1
+		rts, r7	
+
+;====================================================================================================================================================================
+
+
+;====================================================================================================================================================================
+;							PROGRAMAS PRINCIPAIS
 
 
 ClockProgram:							;programa principal do relogio
 	mov #ClockProgramInterruptions, ivet			;configura a rotina de interrupcao
 	mov #'0', r1						;salva o caractere '0' em r1 para economizar acessos a memoria e instrucoes
 
-	mov #7, r3
+	mov #7, r3						;coloca cursor na ultima posicao do relogio
 
 	inittime:						;inicializa o vetor do relogio com 00000000
 		mov r1, time(r3)
@@ -205,7 +233,28 @@ ClockProgram:							;programa principal do relogio
 	mov #0, inte						;desativa interrupcoes
 	rts r7
 
-		
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+StringProgram:
+	jsr r7, ClearDisplay
+	mov #StringProgramInterruptions, ivet
+	mov #'_', r0
+	clr r5							;temporario para a rotacao do cursor e caracter do diplay
+	clr r3
+	mov #h83, inte						;ativa interrupcao do teclado e do timer
+	clr exit
+	keyboard_loop:
+		tst exit
+		beq keyboard_loop
+	jsr r7, ClearDisplay					;limpa o display apos a saida do programa
+	rts r7
+
+
+;====================================================================================================================================================================
+
+
+;====================================================================================================================================================================
+;							TRATADORES DE INTERRUPCAO		
 ClockProgramInterruptions:
 	
 	cmp ints, #h82						;verifica a fonte da interrupcao
@@ -235,15 +284,15 @@ ClockProgramInterruptions:
 		jsr r7, ClearClock
 		br clkint_return
 
-		inchours:					;incrementa as horas
+		inchours:					;incrementa as horas atraves do teclado
 			mov #1, r3
 			add #1, time(r3)
 			br clkint_return
-		incminutes:					;incrementa os minutos
+		incminutes:					;incrementa os minutos atraves do teclado
 			mov #4, r3
 			add #1, time(r3)
 			br clkint_return
-		finish:						;sai do programa
+		finish:						;sai do programa atualizado a flag
 			mov #hff exit
 
 	clkint_return:
@@ -253,20 +302,7 @@ ClockProgramInterruptions:
 	clr ints						;limpa a flag de interrupcao
 	rti
 
-
-StringProgram:
-	jsr r7, ClearDisplay
-	mov #StringProgramInterruptions, ivet
-	mov #'_', r0
-	clr r5							;temporario para a rotacao do cursor e caracter do diplay
-	clr r3
-	mov #h83, inte						;ativa interrupcao do teclado e do timer
-	clr exit
-	keyboard_loop:
-		tst exit
-		beq keyboard_loop
-	jsr r7, ClearDisplay					;limpa o display apos a saida do programa
-	rts r7
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 StringProgramInterruptions:
 	cmp r3, #36						;Limpa o display quando o cursor chega ao final para evitar sobrescrita de memoria
@@ -302,14 +338,18 @@ StringProgramInterruptions:
 		br print_char
 
 
-;Aqui o retorno da interrupcao foi movido por extrapolar os 128 bits de desvio condicional
-keyinterruptret:
-		clr ints
-		clr tecst
-		rti
+	;Aqui o retorno da interrupcao foi movido por extrapolar os 128 bits de desvio condicional
+	keyinterruptret:
+			clr ints
+			clr tecst
+			rti
 		
 
 
+		;tratamento dos caracteres especiais
+		;aqui tive uns cuidados especiais para corrigir diversos bugs referentes ao cursor
+		;por exemplo: cursor desaparecendo, cursor sendo deixado no meio da tela, cursor sendo substituido por outro char
+		;cursor apagando o caracter na hora de se mover para frente, entre outros detalhes que agora foram corrigidos
 
 		reset_cursor:
 			cmp display(r3), #'_' 			;se o caracter do display NAO for o cursor, apenas reseta o cursor
@@ -355,9 +395,16 @@ keyinterruptret:
 		br keyinterruptret
 
 	finish_keyboard:
-		mov #hff, exit					;finaliza o programa ao receber o caracter de finalizacao (ctrl + f)
+		mov #hff, exit					;finaliza o programa ao receber o caracter de finalizacao (ctrl + f) atualizando a flag de saida
 		br keyinterruptret
 		
+
+;====================================================================================================================================================================
+
+;====================================================================================================================================================================
+;							AREA DE ACESSSO AOS PROGRAMAS PRINCIPAIS
+
+
 	
 
 org h8000
@@ -367,3 +414,6 @@ jsr r7, (h7f00(r0))
 mov #2, r0
 jsr r7, (h7f00(r0))
 hlt
+
+;====================================================================================================================================================================
+
